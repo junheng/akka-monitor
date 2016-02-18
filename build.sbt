@@ -1,5 +1,7 @@
 import CommonDependency.dependencies
 
+organization in ThisBuild := "io.github.junheng.akka"
+
 lazy val root = (project in file("."))
   .settings(
     name := "akka-monitor",

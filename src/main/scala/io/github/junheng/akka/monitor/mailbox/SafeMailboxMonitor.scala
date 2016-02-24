@@ -1,13 +1,13 @@
 package io.github.junheng.akka.monitor.mailbox
 
-import akka.actor.{ActorSystem, ActorRef, ActorLogging, Actor}
+import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem}
 import akka.dispatch.MessageQueue
 import com.typesafe.config.Config
 import io.github.junheng.akka.monitor.mailbox.SafeMailboxMonitor._
 
+import scala.collection.JavaConversions._
 import scala.concurrent.duration._
 import scala.language.postfixOps
-import scala.collection.JavaConversions._
 
 class SafeMailboxMonitor(config: Config) extends Actor with ActorLogging {
 
@@ -57,8 +57,8 @@ class SafeMailboxMonitor(config: Config) extends Actor with ActorLogging {
 
     case GetSpecificMessageQueueDetail(path) =>
       monitoredMQs.find(_._1.path.toStringWithoutAddress == path) match {
-        case Some((actorRef, queue)) => sender ! Some(MessageQueueDetail(actorRef.path.toStringWithoutAddress, queue.numberOfMessages))
-        case None => sender ! None
+        case Some((actorRef, queue)) => sender ! MessageQueueDetail(actorRef.path.toStringWithoutAddress, queue.numberOfMessages)
+        case None => sender ! MessageQueueDetail(path, 0)
       }
   }
 

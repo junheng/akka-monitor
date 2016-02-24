@@ -5,6 +5,7 @@ import java.util.concurrent.Executors
 
 import akka.dispatch.ForkJoinExecutorConfigurator.AkkaForkJoinTask
 import akka.dispatch.MonitorableThreadFactory
+import akka.event.LoggingAdapter
 import io.github.junheng.akka.monitor.dispatcher.MonitoredForkJoinPool.WorkerThreadFactory
 
 import scala.concurrent.forkjoin.ForkJoinPool
@@ -48,8 +49,13 @@ class MonitoredForkJoinPool(parallelism: Int, monitorInterval: Long, threadFacto
 }
 
 object MonitoredForkJoinPool {
-   type WorkerThreadFactory = ForkJoinPool.ForkJoinWorkerThreadFactory
-   type UncaughtExceptionHandler = Thread.UncaughtExceptionHandler
+  type WorkerThreadFactory = ForkJoinPool.ForkJoinWorkerThreadFactory
+  type UncaughtExceptionHandler = Thread.UncaughtExceptionHandler
 
-   var monitor: (DispatcherStatus) => Unit = _ //hook method please replace before dispatcher started
- }
+  var monitor: (DispatcherStatus) => Unit = _ //hook method please replace before dispatcher started
+
+  def logger(log: LoggingAdapter) = monitor = (status: DispatcherStatus) => {
+    import status._
+    log.info(s"$id - [PS $poolSize] [ATC $activeThreadCount] [P $parallelism] [RTC $runningThreadCount] [QSC $queuedSubmissionCount] [QTC $queuedTaskCount] [SC $stealCount]]")
+  }
+}

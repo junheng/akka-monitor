@@ -63,7 +63,7 @@ object MonitoredForkJoinPool {
 
   var monitor: (DispatcherStatus) => Unit = _ //hook method please replace before dispatcher started
 
-  def logger(log: LoggingAdapter) = monitor = (status: DispatcherStatus) => {
+  def logger(log: LoggingAdapter): Unit = monitor = (status: DispatcherStatus) => {
     import status._
     log.info(s"$id - [PS $poolSize] [ATC $activeThreadCount] [P $parallelism] [RTC $runningThreadCount] [QSC $queuedSubmissionCount] [QTC $queuedTaskCount] [SC $stealCount]]")
   }

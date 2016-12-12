@@ -18,7 +18,7 @@ class MonitoredSafeMailbox(capacity: Int) extends MailboxType with ProducesMessa
 }
 
 object MonitoredSafeMailbox {
-  var whenMessageQueueCreated: (Option[ActorRef], Option[ActorSystem], MessageQueue) => Unit = (ownerOpt, systemOpt, queue) => {}
-  var whenOutOfMessageQueueCapacity: (ActorRef, ActorRef, Any, Int) => Unit = (sender, receiver, message, count) => {}
+  var whenMessageQueueCreated: (Option[ActorRef], Option[ActorSystem], MessageQueue) => Unit = (_, _, _) => {}
+  var whenOutOfMessageQueueCapacity: (ActorRef, ActorRef, Any, Int) => Unit = (_, _, _, _) => {}
 }
 

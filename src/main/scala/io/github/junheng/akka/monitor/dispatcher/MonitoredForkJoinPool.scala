@@ -13,7 +13,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 class MonitoredForkJoinPool(parallelism: Int, monitorInterval: Long, threadFactory: WorkerThreadFactory, unhandledExceptionHandler: UncaughtExceptionHandler) extends ForkJoinPool(parallelism, threadFactory, unhandledExceptionHandler, true) {
 
-`  MonitoredForkJoinPool.monitoredForkJoinPools += this
+  MonitoredForkJoinPool.monitoredForkJoinPools += this
 
   override def shutdown(): Unit = super.shutdown()
 

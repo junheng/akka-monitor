@@ -30,7 +30,7 @@ object MonitoredForkJoinPool {
   type WorkerThreadFactory = ForkJoinPool.ForkJoinWorkerThreadFactory
   type UncaughtExceptionHandler = Thread.UncaughtExceptionHandler
 
-  protected var monitoredForkJoinPools = Set[MonitoredForkJoinPool]()
+  protected var monitoredForkJoinPools: Set[MonitoredForkJoinPool] = Set[MonitoredForkJoinPool]()
 
   Future {
     while (true) {

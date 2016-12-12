@@ -25,7 +25,7 @@ import scala.concurrent.forkjoin.ForkJoinPool
  */
 class MonitoredForkJoinExecutorServiceConfigurator(_config: Config, prerequisites: DispatcherPrerequisites) extends ExecutorServiceConfigurator(_config, prerequisites) {
 
-  val config = _config.getConfig("monitored-fork-join-executor")
+  private val config = _config.getConfig("monitored-fork-join-executor")
 
   override def createExecutorServiceFactory(id: String, threadFactory: ThreadFactory): ExecutorServiceFactory = {
     val factory = threadFactory match {

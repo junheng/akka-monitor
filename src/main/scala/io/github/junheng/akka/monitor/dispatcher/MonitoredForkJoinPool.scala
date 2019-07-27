@@ -1,14 +1,12 @@
 package io.github.junheng.akka.monitor.dispatcher
 
 import java.lang.Thread.UncaughtExceptionHandler
-import java.util.concurrent.Executors
+import java.util.concurrent.{Executors, ForkJoinPool}
 
-import akka.dispatch.ForkJoinExecutorConfigurator.AkkaForkJoinTask
 import akka.dispatch.MonitorableThreadFactory
 import akka.event.LoggingAdapter
 import io.github.junheng.akka.monitor.dispatcher.MonitoredForkJoinPool.WorkerThreadFactory
 
-import scala.concurrent.forkjoin.ForkJoinPool
 import scala.concurrent.{ExecutionContext, Future}
 
 class MonitoredForkJoinPool(parallelism: Int, monitorInterval: Long, threadFactory: WorkerThreadFactory, unhandledExceptionHandler: UncaughtExceptionHandler) extends ForkJoinPool(parallelism, threadFactory, unhandledExceptionHandler, true) {
@@ -21,7 +19,7 @@ class MonitoredForkJoinPool(parallelism: Int, monitorInterval: Long, threadFacto
     if (runnable eq null) {
       throw new NullPointerException
     } else {
-      super.execute(new AkkaForkJoinTask(runnable))
+      super.execute(runnable)
     }
   }
 }

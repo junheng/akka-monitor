@@ -1,5 +1,7 @@
 package io.github.junheng.akka.monitor.dispatcher
 
+import io.github.junheng.akka.monitor.AbstractActorTest
+
 import scala.concurrent.duration._
 import scala.language.postfixOps
 

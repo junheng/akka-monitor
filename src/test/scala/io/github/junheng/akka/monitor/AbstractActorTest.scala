@@ -1,4 +1,4 @@
-package io.github.junheng.akka.monitor.dispatcher
+package io.github.junheng.akka.monitor
 
 import akka.actor.ActorSystem
 import akka.testkit.{ImplicitSender, TestKit}

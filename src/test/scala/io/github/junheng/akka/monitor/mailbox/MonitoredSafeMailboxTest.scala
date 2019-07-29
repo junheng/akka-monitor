@@ -1,7 +1,7 @@
 package io.github.junheng.akka.monitor.mailbox
 
 import akka.actor.{Actor, Props}
-import io.github.junheng.akka.monitor.dispatcher.AbstractActorTest
+import io.github.junheng.akka.monitor.AbstractActorTest
 import io.github.junheng.akka.monitor.mailbox.MonitoredSafeMailbox.{MessageQueueCreated, OutOfMessageQueueCapacity}
 import io.github.junheng.akka.monitor.mailbox.MonitoredSafeMailboxTest.TestWallActor
 

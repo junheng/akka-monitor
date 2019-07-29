@@ -9,7 +9,7 @@ class MonitoredForkJoinPoolTest extends AbstractActorTest("pool-test.conf") {
 
   "MonitoredForkJoinPool" should {
     "can monitor fork join pool status" in {
-      MonitoredForkJoinPool.registerOverseer(self, 1 seconds)
+      MonitoredForkJoinPool.registerWatcher(self, 1 seconds)
 
       expectMsgAllClassOf[DispatcherStatus](5 seconds)
     }

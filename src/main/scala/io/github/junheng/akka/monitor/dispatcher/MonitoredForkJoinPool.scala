@@ -38,7 +38,7 @@ object MonitoredForkJoinPool {
 
   protected var reportInterval: FiniteDuration = 15 seconds
 
-  def registerOverseer(watcher: ActorRef, reportInterval: FiniteDuration = 15 seconds): Unit = {
+  def registerWatcher(watcher: ActorRef, reportInterval: FiniteDuration = 15 seconds): Unit = {
     this.watcher = watcher
     this.reportInterval = reportInterval
   }

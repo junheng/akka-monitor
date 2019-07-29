@@ -1,18 +1,19 @@
 package io.github.junheng.akka.monitor.mailbox
 
 import akka.actor.ActorRef
-import akka.dispatch.{Envelope, MessageQueue, UnboundedMessageQueueSemantics, AbstractNodeQueue}
+import akka.dispatch.{AbstractNodeQueue, Envelope, MessageQueue, UnboundedMessageQueueSemantics}
+import io.github.junheng.akka.monitor.mailbox.MonitoredSafeMailbox.OutOfMessageQueueCapacity
 
 import scala.annotation.tailrec
 
-class MonitoredSafeMessageQueue(capacity: Int, outOfCapacity: (ActorRef, ActorRef, Any, Int) => Unit)
+class MonitoredSafeMessageQueue(capacity: Int, watcher: ActorRef)
   extends AbstractNodeQueue[Envelope]
-  with MessageQueue
-  with UnboundedMessageQueueSemantics {
+    with MessageQueue
+    with UnboundedMessageQueueSemantics {
 
   final def enqueue(receiver: ActorRef, handle: Envelope): Unit = {
     if (count() < capacity) add(handle)
-    else outOfCapacity(handle.sender, receiver, handle.message, count())
+    else watcher ! OutOfMessageQueueCapacity(handle.sender, receiver, handle.message, count())
   }
 
   final def dequeue(): Envelope = poll()

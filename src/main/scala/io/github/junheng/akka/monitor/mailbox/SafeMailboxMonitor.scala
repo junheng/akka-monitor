@@ -6,21 +6,29 @@ import com.typesafe.config.Config
 import io.github.junheng.akka.monitor.mailbox.MonitoredSafeMailbox.{MessageQueueCreated, OutOfMessageQueueCapacity}
 import io.github.junheng.akka.monitor.mailbox.SafeMailboxMonitor._
 
-import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 import scala.concurrent.duration._
 import scala.language.postfixOps
 
-class SafeMailboxMonitor(config: Config) extends Actor with ActorLogging {
+/**
+ * Make sure this actor not use a heavy load dispatcher
+ * the best practice is use special dispatch instead akka default
+ *
+ * @param reportInterval    log output interval
+ * @param watchedPathPatten actor path regex patten to be watched
+ */
+class SafeMailboxMonitor(reportInterval: Long, watchedPathPatten: List[String]) extends Actor with ActorLogging {
 
   import context.dispatcher
 
-  private val reportInterval = config.getDuration("report-interval", MILLISECONDS) millisecond
-
-  private val watchedPaths = config.getStringList("watched-actor-paths").toList
+  def this(config: Config) = this(
+    config.getDuration("report-interval", MILLISECONDS),
+    config.getStringList("watched-actor-paths").asScala.toList
+  )
 
   protected var monitoredMQs: Map[ActorRef, MessageQueue] = Map[ActorRef, MessageQueue]()
 
-  private val reporter = context.system.scheduler.schedule(reportInterval, reportInterval, self, LogMessageQueueDetail)
+  private val reporter = context.system.scheduler.schedule(reportInterval millis, reportInterval millis, self, LogMessageQueueDetail)
 
   override def preStart(): Unit = log.info("started")
 
@@ -30,9 +38,9 @@ class SafeMailboxMonitor(config: Config) extends Actor with ActorLogging {
 
     case MessageQueueCreated(Some(owner), Some(system), mq) =>
       val path = owner.path.toStringWithoutAddress
-      watchedPaths.find(r => path.matches(r)) match {
+      watchedPathPatten.find(r => path.matches(r)) match {
         case Some(_) => monitoredMQs += owner -> mq
-        case None if watchedPaths.isEmpty => monitoredMQs += owner -> mq //if no actor path a specified then watch all
+        case None if watchedPathPatten.isEmpty => monitoredMQs += owner -> mq //if no actor path a specified then watch all
         case None =>
       }
 

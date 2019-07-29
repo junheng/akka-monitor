@@ -1,15 +1,19 @@
 package io.github.junheng.akka.monitor.dispatcher
 
 import java.lang.Thread.UncaughtExceptionHandler
-import java.util.concurrent.{Executors, ForkJoinPool}
+import java.util.concurrent.Executors
 
+import akka.actor.ActorRef
 import akka.dispatch.MonitorableThreadFactory
-import akka.event.LoggingAdapter
+import akka.dispatch.forkjoin.ForkJoinPool
 import io.github.junheng.akka.monitor.dispatcher.MonitoredForkJoinPool.WorkerThreadFactory
 
+import scala.concurrent.duration.{FiniteDuration, _}
 import scala.concurrent.{ExecutionContext, Future}
+import scala.language.postfixOps
 
-class MonitoredForkJoinPool(parallelism: Int, monitorInterval: Long, threadFactory: WorkerThreadFactory, unhandledExceptionHandler: UncaughtExceptionHandler) extends ForkJoinPool(parallelism, threadFactory, unhandledExceptionHandler, true) {
+class MonitoredForkJoinPool(parallelism: Int, threadFactory: WorkerThreadFactory, unhandledExceptionHandler: UncaughtExceptionHandler)
+  extends ForkJoinPool(parallelism, threadFactory, unhandledExceptionHandler, true) {
 
   MonitoredForkJoinPool.monitoredForkJoinPools += this
 
@@ -30,39 +34,40 @@ object MonitoredForkJoinPool {
 
   protected var monitoredForkJoinPools: Set[MonitoredForkJoinPool] = Set[MonitoredForkJoinPool]()
 
+  protected var watcher: ActorRef = ActorRef.noSender
+
+  protected var reportInterval: FiniteDuration = 15 seconds
+
+  def registerOverseer(watcher: ActorRef, reportInterval: FiniteDuration = 15 seconds): Unit = {
+    this.watcher = watcher
+    this.reportInterval = reportInterval
+  }
+
   Future {
     while (true) {
       try {
         //update watched list
         monitoredForkJoinPools = monitoredForkJoinPools.filterNot(p => p.isShutdown || p.isTerminated || p.isTerminating)
         monitoredForkJoinPools.foreach { p =>
-          if (!p.isShutdown && !p.isTerminated && !p.isTerminating && p.getFactory != null && MonitoredForkJoinPool.monitor != null) {
-            MonitoredForkJoinPool.monitor(
-              DispatcherStatus(
-                p.getFactory.asInstanceOf[MonitorableThreadFactory].name,
-                p.getPoolSize,
-                p.getActiveThreadCount,
-                p.getParallelism,
-                p.getRunningThreadCount,
-                p.getQueuedSubmissionCount,
-                p.getQueuedTaskCount,
-                p.getStealCount
-              )
+          if (!p.isShutdown && !p.isTerminated && !p.isTerminating && p.getFactory != null && MonitoredForkJoinPool.watcher != null) {
+            MonitoredForkJoinPool.watcher ! DispatcherStatus(
+              p.getFactory.asInstanceOf[MonitorableThreadFactory].name,
+              p.getPoolSize,
+              p.getActiveThreadCount,
+              p.getParallelism,
+              p.getRunningThreadCount,
+              p.getQueuedSubmissionCount,
+              p.getQueuedTaskCount,
+              p.getStealCount
             )
           }
         }
       } catch {
-        case ex: Exception => ex.printStackTrace()
+        case ex: Exception => watcher ! ex
       } finally {
-        Thread.sleep(60000)
+        Thread.sleep(reportInterval.toMillis)
       }
     }
   }(ExecutionContext.fromExecutor(Executors.newSingleThreadExecutor()))
 
-  var monitor: (DispatcherStatus) => Unit = _ //hook method please replace before dispatcher started
-
-  def logger(log: LoggingAdapter): Unit = monitor = (status: DispatcherStatus) => {
-    import status._
-    log.info(s"$id - [PS $poolSize] [ATC $activeThreadCount] [P $parallelism] [RTC $runningThreadCount] [QSC $queuedSubmissionCount] [QTC $queuedTaskCount] [SC $stealCount]]")
-  }
 }

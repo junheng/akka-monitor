@@ -1,8 +1,9 @@
 package io.github.junheng.akka.monitor.mailbox
 
-import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem}
+import akka.actor.{Actor, ActorLogging, ActorRef}
 import akka.dispatch.MessageQueue
 import com.typesafe.config.Config
+import io.github.junheng.akka.monitor.mailbox.MonitoredSafeMailbox.{MessageQueueCreated, OutOfMessageQueueCapacity}
 import io.github.junheng.akka.monitor.mailbox.SafeMailboxMonitor._
 
 import scala.collection.JavaConversions._
@@ -15,9 +16,9 @@ class SafeMailboxMonitor(config: Config) extends Actor with ActorLogging {
 
   private val reportInterval = config.getDuration("report-interval", MILLISECONDS) millisecond
 
-  private val watchedPaths = config.getStringList("watched-actor-paths")
+  private val watchedPaths = config.getStringList("watched-actor-paths").toList
 
-  private var monitoredMQs = Map[ActorRef, MessageQueue]()
+  protected var monitoredMQs: Map[ActorRef, MessageQueue] = Map[ActorRef, MessageQueue]()
 
   private val reporter = context.system.scheduler.schedule(reportInterval, reportInterval, self, LogMessageQueueDetail)
 
@@ -25,26 +26,21 @@ class SafeMailboxMonitor(config: Config) extends Actor with ActorLogging {
 
   override def postStop(): Unit = reporter.cancel()
 
-  MonitoredSafeMailbox.whenMessageQueueCreated = {
-    case (Some(owner), Some(system), mq) =>
+  override def receive: Receive = {
+
+    case MessageQueueCreated(Some(owner), Some(system), mq) =>
       val path = owner.path.toStringWithoutAddress
       watchedPaths.find(r => path.matches(r)) match {
-        case Some(matched) => self ! MessageQueueCreated(owner, system, mq)
-        case None if watchedPaths.isEmpty => self ! MessageQueueCreated(owner, system, mq)
+        case Some(_) => monitoredMQs += owner -> mq
+        case None if watchedPaths.isEmpty => monitoredMQs += owner -> mq //if no actor path a specified then watch all
         case None =>
       }
-    case _ => //ignored
-  }
 
-  MonitoredSafeMailbox.whenOutOfMessageQueueCapacity = { (sender, receiver, message, count) =>
-    val messageType = message.getClass.getSimpleName
-    val senderPath = sender.path.toStringWithoutAddress
-    val receiptPath = receiver.path.toStringWithoutAddress
-    log.warning(s"out of message queue capacity, message [$messageType] from [$senderPath] to [$receiptPath], current count [$count]")
-  }
-
-  override def receive: Receive = {
-    case MessageQueueCreated(owner, system, mq) => monitoredMQs += owner -> mq
+    case OutOfMessageQueueCapacity(sender, receiver, message, count) =>
+      val messageType = message.getClass.getSimpleName
+      val senderPath = sender.path.toStringWithoutAddress
+      val receiptPath = receiver.path.toStringWithoutAddress
+      log.warning(s"out of message queue capacity, message [$messageType] from [$senderPath] to [$receiptPath], current count [$count]")
 
     case LogMessageQueueDetail =>
       val message = new StringBuilder("mailbox status:")
@@ -53,7 +49,8 @@ class SafeMailboxMonitor(config: Config) extends Actor with ActorLogging {
       }
       log.info(message.toString())
 
-    case GetMessageQueueDetail => sender ! MessageQueueDetails(monitoredMQs.map(x => x._1.path.toStringWithoutAddress -> x._2.numberOfMessages))
+    case GetMessageQueueDetail =>
+      sender ! MessageQueueDetails(monitoredMQs.map(x => x._1.path.toStringWithoutAddress -> x._2.numberOfMessages))
 
     case GetSpecificMessageQueueDetail(path) =>
       monitoredMQs.find(_._1.path.toStringWithoutAddress == path) match {
@@ -75,7 +72,5 @@ object SafeMailboxMonitor {
   case class MessageQueueDetail(path: String, numberOfMessages: Int)
 
   case class MessageQueueDetails(queues: Map[String, Int])
-
-  case class MessageQueueCreated(owner: ActorRef, system: ActorSystem, messageQueue: MessageQueue)
 
 }

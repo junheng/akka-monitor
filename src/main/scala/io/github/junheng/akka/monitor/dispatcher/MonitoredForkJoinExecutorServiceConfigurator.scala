@@ -3,27 +3,27 @@ package io.github.junheng.akka.monitor.dispatcher
 import java.util.concurrent.ThreadFactory
 
 import akka.dispatch._
+import akka.dispatch.forkjoin.ForkJoinPool
 import com.typesafe.config.Config
 
-import scala.concurrent.forkjoin.ForkJoinPool
 
 /**
  * Usages:
  *
  * actor {
- *  provider = "akka.cluster.ClusterActorRefProvider"
- *  default-dispatcher {
- *    executor = "io.github.junheng.akka.overseer.MonitoredForkJoinExecutorServiceConfigurator"
- *    monitored-fork-join-executor {
- *      parallelism-min = 80
- *      parallelism-factor = 50
- *      parallelism-max = 2000
- *      monitor-interval = 15000 //interval to invoke monitor hook
- *    }
- *  }
- *}
+ * provider = "akka.cluster.ClusterActorRefProvider"
+ * default-dispatcher {
+ * executor = "io.github.junheng.akka.overseer.MonitoredForkJoinExecutorServiceConfigurator"
+ * monitored-fork-join-executor {
+ * parallelism-min = 80
+ * parallelism-factor = 50
+ * parallelism-max = 2000
+ * }
+ * }
+ * }
  */
-class MonitoredForkJoinExecutorServiceConfigurator(_config: Config, prerequisites: DispatcherPrerequisites) extends ExecutorServiceConfigurator(_config, prerequisites) {
+class MonitoredForkJoinExecutorServiceConfigurator(_config: Config, prerequisites: DispatcherPrerequisites)
+  extends ExecutorServiceConfigurator(_config, prerequisites) {
 
   private val config = _config.getConfig("monitored-fork-join-executor")
 
@@ -33,7 +33,7 @@ class MonitoredForkJoinExecutorServiceConfigurator(_config: Config, prerequisite
       case other => other
     }
 
-    new ForkJoinExecutorServiceFactory(validate(factory), poolConfig, config.getLong("monitor-interval"))
+    new ForkJoinExecutorServiceFactory(validate(factory), poolConfig)
   }
 
   def poolConfig: Int = {
@@ -46,6 +46,6 @@ class MonitoredForkJoinExecutorServiceConfigurator(_config: Config, prerequisite
 
   def validate(t: ThreadFactory): ForkJoinPool.ForkJoinWorkerThreadFactory = t match {
     case correct: ForkJoinPool.ForkJoinWorkerThreadFactory => correct
-    case x => throw new IllegalStateException("The prerequisites for the MonitoredForkJoinExecutorServiceConfigurator is a ForkJoinPool.ForkJoinWorkerThreadFactory!")
+    case x => throw new IllegalStateException(s"Need ForkJoinPool.ForkJoinWorkerThreadFactory, actual is ${x.getClass.getName}")
   }
 }

@@ -1,8 +1,9 @@
 package io.github.junheng.akka.monitor.mailbox
 
 import akka.actor.{ActorRef, ActorSystem}
-import akka.dispatch.{MessageQueue, NodeMessageQueue, ProducesMessageQueue, MailboxType}
+import akka.dispatch.{MailboxType, MessageQueue, NodeMessageQueue, ProducesMessageQueue}
 import com.typesafe.config.Config
+import io.github.junheng.akka.monitor.mailbox.MonitoredSafeMailbox.MessageQueueCreated
 
 import scala.language.postfixOps
 
@@ -11,14 +12,22 @@ class MonitoredSafeMailbox(capacity: Int) extends MailboxType with ProducesMessa
   def this(settings: ActorSystem.Settings, config: Config) = this(config.getInt("mailbox-capacity"))
 
   override def create(owner: Option[ActorRef], system: Option[ActorSystem]): MessageQueue = {
-    val messageQueue = new MonitoredSafeMessageQueue(capacity, MonitoredSafeMailbox.whenOutOfMessageQueueCapacity)
-    MonitoredSafeMailbox.whenMessageQueueCreated(owner, system, messageQueue)
+    val messageQueue = new MonitoredSafeMessageQueue(capacity, MonitoredSafeMailbox.watcher)
+    Option(MonitoredSafeMailbox.watcher) foreach (_ ! MessageQueueCreated(owner, system, messageQueue))
     messageQueue
   }
 }
 
 object MonitoredSafeMailbox {
-  var whenMessageQueueCreated: (Option[ActorRef], Option[ActorSystem], MessageQueue) => Unit = (_, _, _) => {}
-  var whenOutOfMessageQueueCapacity: (ActorRef, ActorRef, Any, Int) => Unit = (_, _, _, _) => {}
+
+  case class MessageQueueCreated(owner: Option[ActorRef], system: Option[ActorSystem], queue: MessageQueue)
+
+  case class OutOfMessageQueueCapacity(sender: ActorRef, receiver: ActorRef, message: Any, current: Int)
+
+  protected var watcher: ActorRef = ActorRef.noSender
+
+  def registerWatcher(watcher: ActorRef): Unit = {
+    this.watcher = watcher
+  }
 }
 

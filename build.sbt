@@ -5,7 +5,7 @@ val akkaVersion = "2.5.19"
 lazy val `akka-monitor` = (project in file("."))
   .settings(
     name := "akka-monitor",
-    version := "0.4.2.0-SNAPSHOT",
+    version := "0.4.2.5-SNAPSHOT",
     scalaVersion := "2.12.8",
     libraryDependencies ++= Seq(
       "com.typesafe.akka" %% "akka-actor" % akkaVersion withSources(),

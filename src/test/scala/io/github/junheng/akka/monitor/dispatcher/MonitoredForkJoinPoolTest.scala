@@ -11,6 +11,7 @@ class MonitoredForkJoinPoolTest extends AbstractActorTest("pool-test.conf") {
     "can monitor fork join pool status" in {
       MonitoredForkJoinPool.registerWatcher(self, 1 seconds)
 
+      expectMsgAllClassOf[DispatcherStateList](5 seconds)
       expectMsgAllClassOf[DispatcherStatus](5 seconds)
     }
   }

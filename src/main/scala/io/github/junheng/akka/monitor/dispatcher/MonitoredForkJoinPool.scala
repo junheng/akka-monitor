@@ -14,7 +14,7 @@ class MonitoredForkJoinPool(parallelism: Int, threadFactory: WorkerThreadFactory
   extends ForkJoinPool(parallelism, threadFactory, unhandledExceptionHandler, true) {
 
   MonitoredForkJoinPool.synchronized {
-    MonitoredForkJoinPool.monitoredForkJoinPools :+= this
+    MonitoredForkJoinPool.monitoredForkJoinPools += this
   }
 
   override def shutdown(): Unit = super.shutdown()
@@ -32,7 +32,7 @@ object MonitoredForkJoinPool {
   type WorkerThreadFactory = ForkJoinPool.ForkJoinWorkerThreadFactory
   type UncaughtExceptionHandler = Thread.UncaughtExceptionHandler
 
-  protected var monitoredForkJoinPools: Seq[MonitoredForkJoinPool] = Seq[MonitoredForkJoinPool]()
+  protected var monitoredForkJoinPools: Set[MonitoredForkJoinPool] = Set[MonitoredForkJoinPool]()
 
   protected var watcher: ActorRef = ActorRef.noSender
 
@@ -54,7 +54,6 @@ object MonitoredForkJoinPool {
             Option(watcher) foreach { registerWatcher =>
               registerWatcher ! DispatcherStateList.create(monitoredForkJoinPools.toList)
               monitoredForkJoinPools.filterNot(p => p.isShutdown || p.isTerminated || p.isTerminating).foreach { p =>
-                println(s"echo pools: ${monitoredForkJoinPools.size}")
                 if (!p.isShutdown && !p.isTerminated && !p.isTerminating && p.getFactory != null && registerWatcher != null) {
                   registerWatcher ! DispatcherStatus(
                     p.getFactory.asInstanceOf[MonitorableThreadFactory].name,
